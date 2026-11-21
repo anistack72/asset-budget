@@ -1,0 +1,7 @@
+{
+  "total": { "raw": 1500000, "gzip": 500000, "brotli": 450000 },
+  "perFile": { "raw": 500000 },
+  "extensions": [".js", ".css", ".html"],
+  "maxFiles": 5000,
+  "maxFileBytes": 26214400
+}
