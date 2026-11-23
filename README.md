@@ -30,7 +30,7 @@ node cli.mjs /path/to/your/dist --config budget.example.json
 node cli.mjs /path/to/your/dist --config budget.example.json --format html > budget-report.html
 ```
 
-Requires **Node.js 22+**. No runtime dependencies. Source distribution only; not yet published to npm.
+Requires **Node.js 22+**. No runtime dependencies. Source distribution and verified GitHub release packages; not published to npm.
 
 ## Configure integer byte limits
 
@@ -95,3 +95,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for changes and [SECURITY.md](SECURITY.md
 ---
 
 Built by **Anis Mosbah** · [Professional enquiries](mailto:contact@anis-mosbah.dev) · [MIT license](LICENSE)
+
+## Versioned packages
+
+[GitHub releases](https://github.com/anistack72/asset-budget/releases) provide the npm source tarball and `SHA256SUMS.txt`. Release publication runs only after the complete Node 22/24 test matrix passes on Linux, macOS and Windows. Published versions and tags are preserved; no new release is created until `package.json` has a new version. This workflow does not publish to the npm registry.
