@@ -8,6 +8,7 @@ import re
 import subprocess
 import tarfile
 import tempfile
+import time
 
 ALLOWED = {'anistack72/ai-runtime-doctor', 'anistack72/asset-budget'}
 MATRIX = {f'test ({platform}, {node})' for platform in
@@ -127,7 +128,14 @@ def publish(root, output, repo, sha, run_id, github, dry_run=False):
                          "Read the README and docs/try-it.md for supported behavior and limitations.\n")
         github.run('release', 'create', tag, '--repo', repo, '--target', sha, '--draft',
                    '--title', meta['name'] + ' ' + tag, '--notes-file', str(notes))
-        release = find_release(github, repo, tag)
+        # Only retry reads here. A newly created draft may not yet be visible
+        # through the listing; never repeat the create operation implicitly.
+        for delay in (0, 1, 2, 4):
+            if delay:
+                time.sleep(delay)
+            release = find_release(github, repo, tag)
+            if release is not None:
+                break
         if release is None:
             raise ReleaseError('Created draft could not be confirmed; retry safely')
     existing = {a['name'] for a in release['assets']}
@@ -158,7 +166,10 @@ def main():
                          os.environ['TESTED_SHA'], os.environ['TEST_RUN_ID'], GitHub(), args.dry_run)
         print(json.dumps(result))
     except (ReleaseError, KeyError, ValueError, OSError, subprocess.SubprocessError, tarfile.TarError) as error:
-        print(json.dumps({'status': 'failed_closed', 'error_type': type(error).__name__}))
+        result = {'status': 'failed_closed', 'error_type': type(error).__name__}
+        if isinstance(error, ReleaseError):
+            result['reason'] = str(error)  # Authored static messages; never a response body.
+        print(json.dumps(result))
         return 1
     return 0
 

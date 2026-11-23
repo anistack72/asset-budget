@@ -4,6 +4,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from publish_release import MATRIX, ReleaseError, publish
 
@@ -21,6 +22,7 @@ class FakeGitHub:
         self.corrupt = False
         self.tag = None
         self.full_release_pages = False
+        self.hidden_draft_reads = 0
 
     def api(self, endpoint, optional=False):
         if endpoint.endswith('/commits/main'):
@@ -38,6 +40,9 @@ class FakeGitHub:
         if '/releases?' in endpoint:
             if self.full_release_pages:
                 return [{'tag_name': f'v2.0.{n}'} for n in range(100)]
+            if self.release and self.hidden_draft_reads:
+                self.hidden_draft_reads -= 1
+                return []
             if self.release:
                 self.release['tag_name'] = 'v0.1.0'
                 self.release['assets'] = [{'name': name} for name in self.assets]
@@ -110,6 +115,22 @@ class ReleaseIntegration(unittest.TestCase):
         with self.assertRaises(ReleaseError):
             self.publish()
         self.assertEqual(self.gh.calls, [])
+
+    def test_new_draft_visibility_delay_retries_reads_only(self):
+        self.gh.hidden_draft_reads = 2
+        with patch('publish_release.time.sleep') as sleep:
+            self.assertEqual(self.publish()['status'], 'published')
+        self.assertEqual(sleep.call_count, 2)
+        self.assertEqual(sum(c[:2] == ('release', 'create') for c in self.gh.calls), 1)
+
+    def test_unconfirmed_draft_stops_after_bounded_reads(self):
+        self.gh.hidden_draft_reads = 10
+        with patch('publish_release.time.sleep') as sleep:
+            with self.assertRaisesRegex(ReleaseError, 'Created draft could not be confirmed'):
+                self.publish()
+        self.assertEqual(sleep.call_count, 3)
+        self.assertTrue(self.gh.release['draft'])
+        self.assertEqual(sum(c[:2] == ('release', 'create') for c in self.gh.calls), 1)
 
     def test_dry_run_has_no_network_or_mutations(self):
         self.assertEqual(self.publish(dry_run=True)['status'], 'validated_only')
