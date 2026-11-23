@@ -65,6 +65,25 @@ def validate_package(root, output):
     return meta, archive
 
 
+
+def find_release(github, repo, tag):
+    # The by-tag endpoint returns published releases only. Authenticated listings
+    # also include drafts, which must be resumed rather than created twice.
+    published = github.api(f'repos/{repo}/releases/tags/{tag}', optional=True)
+    if published is not None:
+        return published
+    for page in range(1, 11):
+        releases = github.api(f'repos/{repo}/releases?per_page=100&page={page}')
+        matches = [release for release in releases if release['tag_name'] == tag]
+        if len(matches) > 1:
+            raise ReleaseError('Ambiguous release version; no mutation permitted')
+        if matches:
+            return matches[0]
+        if len(releases) < 100:
+            return None
+    raise ReleaseError('Release lookup exceeded its bound; no duplicate creation permitted')
+
+
 def publish(root, output, repo, sha, run_id, github, dry_run=False):
     if repo not in ALLOWED or not re.fullmatch(r'[a-f0-9]{40}', sha) or not str(run_id).isdigit():
         raise ReleaseError('Repository, commit or workflow run is not authorized')
@@ -82,7 +101,7 @@ def publish(root, output, repo, sha, run_id, github, dry_run=False):
     if jobs['total_count'] > 100 or {j['name'] for j in jobs['jobs']} != MATRIX or any(
             j['status'] != 'completed' or j['conclusion'] != 'success' for j in jobs['jobs']):
         raise ReleaseError('The complete six-job platform/Node matrix must pass')
-    release = github.api(f'repos/{repo}/releases/tags/{tag}', optional=True)
+    release = find_release(github, repo, tag)
     if release and not release['draft']:
         return {'status': 'skipped_version_already_published', 'url': release['html_url']}
     if release and release['target_commitish'] != sha:
@@ -108,7 +127,9 @@ def publish(root, output, repo, sha, run_id, github, dry_run=False):
                          "Read the README and docs/try-it.md for supported behavior and limitations.\n")
         github.run('release', 'create', tag, '--repo', repo, '--target', sha, '--draft',
                    '--title', meta['name'] + ' ' + tag, '--notes-file', str(notes))
-        release = github.api(f'repos/{repo}/releases/tags/{tag}')
+        release = find_release(github, repo, tag)
+        if release is None:
+            raise ReleaseError('Created draft could not be confirmed; retry safely')
     existing = {a['name'] for a in release['assets']}
     for file in (archive, sums):
         if file.name not in existing:

@@ -20,6 +20,7 @@ class FakeGitHub:
         self.failed_matrix = False
         self.corrupt = False
         self.tag = None
+        self.full_release_pages = False
 
     def api(self, endpoint, optional=False):
         if endpoint.endswith('/commits/main'):
@@ -33,9 +34,15 @@ class FakeGitHub:
         if '/git/ref/tags/' in endpoint:
             return self.tag
         if '/releases/tags/' in endpoint:
+            return self.release if self.release and not self.release['draft'] else None
+        if '/releases?' in endpoint:
+            if self.full_release_pages:
+                return [{'tag_name': f'v2.0.{n}'} for n in range(100)]
             if self.release:
+                self.release['tag_name'] = 'v0.1.0'
                 self.release['assets'] = [{'name': name} for name in self.assets]
-            return self.release
+                return [self.release]
+            return []
         raise AssertionError(endpoint)
 
     def run(self, *args):
@@ -97,6 +104,12 @@ class ReleaseIntegration(unittest.TestCase):
         calls = len(self.gh.calls)
         self.assertEqual(self.publish()['status'], 'skipped_version_already_published')
         self.assertEqual(len(self.gh.calls), calls)
+
+    def test_lookup_bound_prevents_duplicate_release_creation(self):
+        self.gh.full_release_pages = True
+        with self.assertRaises(ReleaseError):
+            self.publish()
+        self.assertEqual(self.gh.calls, [])
 
     def test_dry_run_has_no_network_or_mutations(self):
         self.assertEqual(self.publish(dry_run=True)['status'], 'validated_only')
