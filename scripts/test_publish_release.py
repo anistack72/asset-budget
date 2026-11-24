@@ -132,6 +132,14 @@ class ReleaseIntegration(unittest.TestCase):
         self.assertTrue(self.gh.release['draft'])
         self.assertEqual(sum(c[:2] == ('release', 'create') for c in self.gh.calls), 1)
 
+    def test_mismatched_package_identity_is_rejected(self):
+        self.meta['name'] = '@someone/else'
+        (self.root / 'package.json').write_text(json.dumps(self.meta))
+        self.pack()
+        with self.assertRaisesRegex(ReleaseError, 'Package identity'):
+            self.publish()
+        self.assertEqual(self.gh.calls, [])
+
     def test_dry_run_has_no_network_or_mutations(self):
         self.assertEqual(self.publish(dry_run=True)['status'], 'validated_only')
         self.assertEqual(self.gh.calls, [])

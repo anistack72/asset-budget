@@ -10,7 +10,9 @@ import tarfile
 import tempfile
 import time
 
-ALLOWED = {'anistack72/ai-runtime-doctor', 'anistack72/asset-budget'}
+ALLOWED = {'anistack72/ai-runtime-doctor', 'anistack72/asset-budget',
+           'anistack72/web-audit-workbench', 'anistack72/mac-release-gate',
+           'anistack72/security-report-kit'}
 MATRIX = {f'test ({platform}, {node})' for platform in
           ('ubuntu-latest', 'macos-latest', 'windows-latest') for node in ('22', '24')}
 
@@ -89,6 +91,8 @@ def publish(root, output, repo, sha, run_id, github, dry_run=False):
     if repo not in ALLOWED or not re.fullmatch(r'[a-f0-9]{40}', sha) or not str(run_id).isdigit():
         raise ReleaseError('Repository, commit or workflow run is not authorized')
     meta, archive = validate_package(root, output)
+    if meta['name'] != '@' + repo:
+        raise ReleaseError('Package identity differs from authorized repository')
     tag = 'v' + meta['version']
     if dry_run:
         return {'status': 'validated_only', 'tag': tag, 'artifact': archive.name}
