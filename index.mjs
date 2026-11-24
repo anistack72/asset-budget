@@ -16,6 +16,7 @@ export function validateBudget(input = {}) {
   const result = { total: {}, perFile: {}, extensions: null, maxFiles: 5000, maxFileBytes: 25 * 1024 * 1024, ...input };
   limits(result.total); limits(result.perFile);
   if (result.extensions !== null && (!Array.isArray(result.extensions) || !result.extensions.length || result.extensions.some(e => typeof e !== 'string' || !/^\.[a-z0-9]+$/i.test(e)))) throw new Error('extensions must be a non-empty array such as [".js", ".css"]');
+  if (result.extensions !== null) result.extensions = result.extensions.map(extension => extension.toLowerCase());
   for (const key of ['maxFiles', 'maxFileBytes']) if (!Number.isSafeInteger(result[key]) || result[key] < 1) throw new Error(`${key} must be a positive integer`);
   return result;
 }

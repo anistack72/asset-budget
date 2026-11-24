@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Match configured extensions case-insensitively so uppercase entries such as `.JS` do not silently omit assets from budget totals.
+- Preserve the caller's extension array, including frozen configuration objects.
+
 ## Unreleased
 
 - Add a fixture-only onboarding walkthrough with JSON and HTML output.

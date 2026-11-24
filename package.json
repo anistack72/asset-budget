@@ -1,6 +1,6 @@
 {
   "name": "@anistack72/asset-budget",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Enforce raw, gzip and Brotli build-size budgets without runtime dependencies.",
   "type": "module",
   "engines": {
