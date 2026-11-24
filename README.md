@@ -4,7 +4,7 @@
 
 ### Give every web build a measurable size budget.
 
-**Node.js 22+** · **MIT** · **v0.1.0** · [API](index.mjs) · [Tests](project.test.mjs)
+**Node.js 22+** · **MIT** · **v0.1.1** · [API](index.mjs) · [Tests](project.test.mjs)
 
 A dependency-free CLI and JavaScript API that measures built assets as **raw, gzip and Brotli bytes**, then enforces explicit limits in CI.
 
@@ -69,6 +69,8 @@ console.log(report.totals, report.largest);
 These figures are not network timings or Core Web Vitals. Server compression settings, caching, transfer overhead and route-level loading affect real delivery. Run against a completed, trusted build directory. A file detected as changing during measurement fails the run. The default maximum file size is 25 MiB; `maxFiles` bounds all visited directory entries, including folders.
 
 Exit codes: **0** budgets passed, **1** a check failed, **2** invalid configuration or measurement error. `--strict` also fails on warnings. No network requests are made.
+
+Extension filters are case-insensitive: `.JS` and `.js` both match JavaScript files. The supplied budget object and extension array are left unchanged.
 
 ## Reproducible demonstration
 

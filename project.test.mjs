@@ -39,3 +39,16 @@ test('symlinks cannot pull external files into the report', { skip: process.plat
   const root = await fixture(t); await writeFile(path.join(root, 'a.js'), 'a'); await symlink(path.join(root, 'a.js'), path.join(root, 'linked.js'));
   const report = await measureDirectory(root); assert.equal(report.files.length, 1); assert.equal(report.skipped[0].reason, 'symlink');
 });
+
+test('extension filters match mixed case without mutating the caller budget', async t => {
+  const root = await fixture(t);
+  await writeFile(path.join(root, 'app.JS'), 'x'.repeat(10));
+  await writeFile(path.join(root, 'style.css'), 'a');
+  await writeFile(path.join(root, 'ignored.map'), 'x'.repeat(100));
+  const extensions = Object.freeze(['.JS', '.css']);
+  const budget = Object.freeze({ extensions, total: Object.freeze({ raw: 11 }) });
+  const report = await measureDirectory(root, budget);
+  assert.deepEqual(report.files.map(file => file.file).sort(), ['app.JS', 'style.css']);
+  assert.equal(report.totals.raw, 11);
+  assert.deepEqual(budget.extensions, ['.JS', '.css']);
+});
